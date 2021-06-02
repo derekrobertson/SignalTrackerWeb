@@ -3,6 +3,7 @@ from flask.json import jsonify
 from app import app, db
 from app.models import User, Device, Reading, CellTower
 
+
 @app.route('/')
 @app.route('/index')
 def index():
@@ -11,11 +12,34 @@ def index():
 
 
 
-
+#######################
 ### REST API ROUTES ###
+#######################
+
 
 """
-API > USER > CREATE
+USERS > GET(ALL)
+"""
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    return jsonify([u.serialize() for u in users])
+
+
+
+"""
+USER > GET(ID)
+"""
+@app.route('/api/users/<int:id>', methods=['GET'])
+def get_user(id):
+    user = User.query.get(id)
+    if not user:
+        abort(400)
+    return jsonify(user.serialize())
+
+
+"""
+USERS > CREATE
 """
 @app.route('/api/users', methods = ['POST'])
 def new_user():
@@ -33,24 +57,46 @@ def new_user():
     user.hash_password(password)
     db.session.add(user)
     db.session.commit()
-    return jsonify({ 'user_id': user.user_id }), 201, {'Location': url_for('get_user', id = user.user_id, _external = True)}
+
+    return jsonify(user.serialize()), 201, {'Location': url_for('get_user', id = user.user_id, _external = True)}
 
 
 """
-API > USER > GET(ID)
+USERS > UPDATE(ID)
 """
-@app.route('/api/users/<int:id>')
-def get_user(id):
+@app.route('/api/user/<int:id>', methods=['PUT'])
+def update_user(id):
+    first_name = request.json.get('first_name')
+    last_name = request.json.get('last_name')
+    email = request.json.get('email')
+    password = request.json.get('password')
+    if first_name is None and last_name is None and email is None and password is None:
+        abort(400)  # missing args
     user = User.query.get(id)
     if not user:
         abort(400)
+    if first_name is not None:
+        user.first_name = first_name
+    if last_name is not None:
+        user.last_name = last_name
+    if email is not None:
+        user.email = email
+    if password is not None:
+        user.hash_password(password)
+
+    db.session.commit()
     return jsonify(user.serialize())
-        
+
 
 """
-API > USERS > GET(ALL)
+USERS > DELETE(ID)
 """
-@app.route('/api/users')
-def get_users():
-    users = User.query.all()
-    return jsonify(users=[u.serialize() for u in users])
+@app.route('/api/user/<int:id>', methods=['DELETE'])
+def delete_user(id):
+    user = User.query.get(id)
+    if not user:
+        abort(400)
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({}), 204
+
