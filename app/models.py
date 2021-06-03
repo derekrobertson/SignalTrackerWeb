@@ -66,6 +66,17 @@ class Device(db.Model):
         order_by='desc(Reading.timestamp)'
     )
 
+    def serialize(self):
+        return {
+            'device_id': self.device_id,
+            'user_id': self.user_id,
+            'manufacturer': self.manufacturer,
+            'model': self.model,
+            'serial_no': self.serial_no,
+            'android_version': self.android_version,
+            'timestamp': self.timestamp
+        }
+
     def __repr__(self):
         return '<Device {}'.format(self.device_id)
 
@@ -81,6 +92,18 @@ class Reading(db.Model):
     signal_type = db.Column(db.String(8), nullable=False)
     signal_value = db.Column(db.Integer, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def serialize(self):
+        return {
+            'reading_id': self.reading_id,
+            'device_id': self.device_id,
+            'celltower_id': self.celltower_id,
+            'latitude': str(self.latitude),
+            'longitude': str(self.longitude),
+            'signal_type': self.signal_type,
+            'signal_value': self.signal_value,
+            'timestamp': self.timestamp
+        }
 
     def __repr__(self):
         return '<Reading {}'.format(self.reading_id)
