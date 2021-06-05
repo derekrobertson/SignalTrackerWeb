@@ -1,1 +1,2 @@
 FLASK_APP=signaltracker.py
+FLASK_ENV=development

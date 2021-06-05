@@ -40,7 +40,7 @@ class User(db.Model):
             'email': self.email,
             'login_failure_count': self.login_failure_count,
             'login_locked_timestamp': self.login_locked_timestamp,
-            'timestamp': self.timestamp
+            'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
         }
 
     def __repr__(self):
@@ -74,7 +74,7 @@ class Device(db.Model):
             'model': self.model,
             'serial_no': self.serial_no,
             'android_version': self.android_version,
-            'timestamp': self.timestamp
+            'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
         }
 
     def __repr__(self):
@@ -102,7 +102,7 @@ class Reading(db.Model):
             'longitude': str(self.longitude),
             'signal_type': self.signal_type,
             'signal_value': self.signal_value,
-            'timestamp': self.timestamp
+            'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
         }
 
     def __repr__(self):
@@ -125,7 +125,20 @@ class CellTower(db.Model):
         order_by='desc(Reading.timestamp)'
     )
 
+
+    def serialize(self):
+        return {
+            'celltower_id': self.celltower_id,
+            'celltower_name': self.celltower_name,
+            'location_area_code': self.location_area_code,
+            'mobile_country_code': self.mobile_country_code,
+            'mobile_network_code': self.mobile_network_code,
+            'latitude': str(self.latitude),
+            'longitude': str(self.longitude),
+            'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
+        }
+
+
     def __repr__(self):
         return '<CellTower {}'.format(self.celltower_id)
  
-
