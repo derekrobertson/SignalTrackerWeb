@@ -1,7 +1,18 @@
-from flask import render_template, request, abort, url_for
+from flask import render_template, request, abort, url_for, g
 from flask.json import jsonify
-from app import app, db
+from app import app, db, auth
 from app.models import User, Device, Reading, CellTower
+
+
+### Verification of user creds supplied in HTTPBasic authorization header ###
+@auth.verify_password
+def verify_password(email, password):
+    user = User.query.filter_by(email=email).one_or_none()
+    if user is None or not user.verify_password(password):
+        return False
+    g.user = user
+    return True
+
 
 
 ### USERS ###
@@ -29,13 +40,21 @@ def get_user(id):
 
 """
 USERS > CREATE
+As the mobile app needs the ability to register a new user, the app.secret key value is used to 
+validate the key provided by the call to the api. If it matches it is allowed.
 """
 @app.route('/api/v1.0/users', methods = ['POST'])
 def new_user():
+    app_key = request.json.get('app_key')
     first_name = request.json.get('first_name')
     last_name = request.json.get('last_name')
     email = request.json.get('email')
     password = request.json.get('password')
+
+    # Validate that the api call is being made from a known client (ie. our mobile app)
+    if app_key != app.secret_key:
+        abort(400)
+
     if first_name is None or last_name is None or email is None or password is None:
         abort(400)  # missing args
     if User.query.filter_by(email = email).one_or_none() is not None:

@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_httpauth import HTTPBasicAuth
 import yaml
 
 
@@ -9,13 +10,16 @@ app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # Import secrets
-secrets = yaml.load(open(f'{basedir}\secrets.yaml'))
+secrets = yaml.load(open(f'{basedir}\secrets.yaml'), Loader=yaml.SafeLoader)
 driver = secrets['database']['driver']
 username = secrets['database']['username']
 password = secrets['database']['password']
 fqdn = secrets['database']['fqdn']
 port = secrets['database']['port']
 dbname = secrets['database']['dbname']
+
+# Set the secret key for token salt
+app.secret_key = secrets['app_secret_key']
 
 # Configure the SQLAlchemy part of the app instance
 app.config['SQLALCHEMY_ECHO'] = True
@@ -26,6 +30,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Create the SQLAlchemy db instance
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-    
+auth = HTTPBasicAuth()
 
-from app import routes, api_routes, models
+from app import web_routes, api_routes, models

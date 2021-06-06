@@ -4,14 +4,16 @@ from passlib.apps import custom_app_context as pwd_context
 
 
 
-# SQLAlchemy models
+# SQLAlchemy models for our Postgres database
 
+
+# Model for 'User' database table
 class User(db.Model):
     __tablename__ = 'user'
     user_id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(32), nullable=False)
     last_name = db.Column(db.String(32), nullable=False)
-    email = db.Column(db.String(32), index=True, unique=True, nullable=False)
+    email = db.Column(db.String(32), index=True, unique=True, nullable=False)       # must be unique as its the username for logon
     pwd_hash = db.Column(db.String(128), nullable=False)
     login_failure_count = db.Column(db.Integer, default=0)
     login_locked_timestamp = db.Column(db.DateTime, nullable=True)
@@ -24,14 +26,15 @@ class User(db.Model):
         order_by='desc(Device.timestamp)'
     )
 
+    # Hash the plaintext password with SHA256 for safe storage in database
     def hash_password(self, password):
         self.pwd_hash = pwd_context.encrypt(password)
 
-
+    # Check if the plaintext password, when hashed with SHA256, matches what we have stored in the database
     def verify_password(self, password):
         return pwd_context.verify(password, self.pwd_hash)
 
-
+    # Serialize database content for JSON reply
     def serialize(self):
         return {
             'user_id': self.user_id,
@@ -43,12 +46,12 @@ class User(db.Model):
             'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
         }
 
+    # Representation of python object for output
     def __repr__(self):
         return '<User {}>'.format(self.user_id)
 
 
-
-
+# Model for 'Device' database table
 class Device(db.Model):
     __tablename__ = 'device'
     device_id = db.Column(db.Integer, primary_key=True)
@@ -66,6 +69,7 @@ class Device(db.Model):
         order_by='desc(Reading.timestamp)'
     )
 
+    # Serialize database content for JSON reply
     def serialize(self):
         return {
             'device_id': self.device_id,
@@ -77,11 +81,12 @@ class Device(db.Model):
             'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
         }
 
+    # Representation of python object for output
     def __repr__(self):
         return '<Device {}'.format(self.device_id)
 
 
-
+# Model for 'Reading' database table
 class Reading(db.Model):
     __tablename__ = 'reading'
     reading_id = db.Column(db.Integer, primary_key=True)
@@ -93,6 +98,7 @@ class Reading(db.Model):
     signal_value = db.Column(db.Integer, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Serialize database content for JSON reply
     def serialize(self):
         return {
             'reading_id': self.reading_id,
@@ -105,10 +111,12 @@ class Reading(db.Model):
             'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
         }
 
+    # Representation of python object for output
     def __repr__(self):
         return '<Reading {}'.format(self.reading_id)
     
 
+# Model for 'CellTower' database table
 class CellTower(db.Model):
     __tablename__ = 'celltower'
     celltower_id = db.Column(db.Integer, primary_key=True)
@@ -125,7 +133,7 @@ class CellTower(db.Model):
         order_by='desc(Reading.timestamp)'
     )
 
-
+    # Serialize database content for JSON reply
     def serialize(self):
         return {
             'celltower_id': self.celltower_id,
@@ -138,7 +146,7 @@ class CellTower(db.Model):
             'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
         }
 
-
+    # Representation of python object for output
     def __repr__(self):
         return '<CellTower {}'.format(self.celltower_id)
  
