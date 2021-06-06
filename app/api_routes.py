@@ -50,18 +50,22 @@ def new_user():
     last_name = request.json.get('last_name')
     email = request.json.get('email')
     password = request.json.get('password')
+    role = request.json.get('role')
 
     # Validate that the api call is being made from a known client (ie. our mobile app)
     if app_key != app.secret_key:
         abort(400)
 
-    if first_name is None or last_name is None or email is None or password is None:
+    if first_name is None or last_name is None or email is None or password is None or role is None:
         abort(400)  # missing args
+    if role != 'USER' and role != 'ADMIN':
+        abort(404)  # bad role provided
     if User.query.filter_by(email = email).one_or_none() is not None:
         abort(409)  # existing user
     user = User(first_name = first_name, 
                 last_name = last_name,
-                email = email)
+                email = email,
+                role = role)
     user.hash_password(password)
     db.session.add(user)
     db.session.commit()
@@ -78,9 +82,11 @@ def update_user(id):
     last_name = request.json.get('last_name')
     email = request.json.get('email')
     password = request.json.get('password')
+    role = request.json.get('role')
     
-    if first_name is None and last_name is None and email is None and password is None:
+    if first_name is None and last_name is None and email is None and password is None and role is None:
         abort(400)  # missing args
+
     user = User.query.get(id)
     if not user:
         abort(404)  # doesn't exist
@@ -93,6 +99,10 @@ def update_user(id):
         user.email = email
     if password is not None:
         user.hash_password(password)
+    if role is not None:
+        if role != 'USER' and role != 'ADMIN':
+            abort(404)      # bad role provided
+        user.role = role
 
     db.session.commit()
     return jsonify(user.serialize())

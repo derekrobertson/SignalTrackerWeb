@@ -13,8 +13,9 @@ class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(32), nullable=False)
     last_name = db.Column(db.String(32), nullable=False)
-    email = db.Column(db.String(32), index=True, unique=True, nullable=False)       # must be unique as its the username for logon
+    email = db.Column(db.String(32), index=True, unique=True)       # must be unique as its the username for logon
     pwd_hash = db.Column(db.String(128), nullable=False)
+    role = db.Column(db.String(32), nullable=False)
     login_failure_count = db.Column(db.Integer, default=0)
     login_locked_timestamp = db.Column(db.DateTime, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -41,6 +42,7 @@ class User(db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'email': self.email,
+            'role': self.role,
             'login_failure_count': self.login_failure_count,
             'login_locked_timestamp': self.login_locked_timestamp,
             'timestamp': str(datetime.fromisoformat(str(self.timestamp)))
