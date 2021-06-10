@@ -18,8 +18,8 @@ fqdn = secrets['database']['fqdn']
 port = secrets['database']['port']
 dbname = secrets['database']['dbname']
 
-# Set the secret key for token salt
-app.secret_key = secrets['app_secret_key']
+# Get the trusted api key that the REST API uses to validate calls are coming from the SignalTracker mobile app
+app.api_key = secrets['api_key']
 
 # Configure the SQLAlchemy part of the app instance
 app.config['SQLALCHEMY_ECHO'] = True

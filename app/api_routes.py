@@ -1,10 +1,12 @@
-from flask import render_template, request, abort, url_for, g
+from flask import request, abort, url_for, g
 from flask.json import jsonify
 from app import app, db, auth
 from app.models import User, Device, Reading, CellTower
+import functools
 
 
-### Verification of user creds supplied in HTTPBasic authorization header ###
+# Verification of user creds supplied in HTTPBasic authorization header
+# Saves the authenticated user details in the Flask 'g' session object
 @auth.verify_password
 def verify_password(email, password):
     user = User.query.filter_by(email=email).one_or_none()
@@ -14,6 +16,36 @@ def verify_password(email, password):
     return True
 
 
+# Decorator function that protects any api route by ensuring 
+# that a valid api key is provided in the x-api-key header
+def require_api_key(f):
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        if request.headers.get('x-api-key') != app.api_key:
+            abort(403)  # forbidden
+        # execute the wrapped function
+        return f(*args, **kwargs)
+    return wrapped
+
+
+# Decorator function that protects any api route by ensuring 
+# that the user has ROLE=ADMIN in the user table.
+def require_admin_role(f):
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        if g.user.role != "ADMIN":
+            abort(403)  # forbidden
+        # execute the wrapped function
+        return f(*args, **kwargs)
+    return wrapped
+
+
+
+######################
+# REST API ROUTES
+######################
+
+
 
 ### USERS ###
 
@@ -21,6 +53,9 @@ def verify_password(email, password):
 USERS > GET(ALL)
 """
 @app.route('/api/v1.0/users', methods=['GET'])
+@auth.login_required
+@require_api_key
+@require_admin_role
 def get_users():
     users = User.query.all()
     return jsonify([u.serialize() for u in users])
@@ -31,30 +66,31 @@ def get_users():
 USERS > GET(ID)
 """
 @app.route('/api/v1.0/users/<int:id>', methods=['GET'])
+@auth.login_required
+@require_api_key
 def get_user(id):
     user = User.query.get(id)
     if not user:
         abort(404)
+    # A non-admin level user is only permitted to retrieve their own user record
+    if g.user.role != "ADMIN" and user.email != g.user.email:
+        abort(403)  # forbidden
     return jsonify(user.serialize())
 
 
 """
 USERS > CREATE
-As the mobile app needs the ability to register a new user, the app.secret key value is used to 
-validate the key provided by the call to the api. If it matches it is allowed.
+As the mobile app needs the ability to register a new user, the api_key value is used to 
+validate the key provided by the caller to the api. If it matches it is allowed.
 """
 @app.route('/api/v1.0/users', methods = ['POST'])
+@require_api_key
 def new_user():
-    app_key = request.json.get('app_key')
     first_name = request.json.get('first_name')
     last_name = request.json.get('last_name')
     email = request.json.get('email')
     password = request.json.get('password')
     role = request.json.get('role')
-
-    # Validate that the api call is being made from a known client (ie. our mobile app)
-    if app_key != app.secret_key:
-        abort(400)
 
     if first_name is None or last_name is None or email is None or password is None or role is None:
         abort(400)  # missing args
@@ -77,6 +113,8 @@ def new_user():
 USERS > UPDATE(ID)
 """
 @app.route('/api/v1.0/users/<int:id>', methods=['PUT'])
+@auth.login_required
+@require_api_key
 def update_user(id):
     first_name = request.json.get('first_name')
     last_name = request.json.get('last_name')
@@ -90,6 +128,10 @@ def update_user(id):
     user = User.query.get(id)
     if not user:
         abort(404)  # doesn't exist
+
+    # A non-admin level user is only permitted to retrieve their own user record
+    if g.user.role != "ADMIN" and user.email != g.user.email:
+        abort(403)  # forbidden
     
     if first_name is not None:
         user.first_name = first_name
@@ -112,10 +154,16 @@ def update_user(id):
 USERS > DELETE(ID)
 """
 @app.route('/api/v1.0/users/<int:id>', methods=['DELETE'])
+@require_api_key
+@auth.login_required
 def delete_user(id):
     user = User.query.get(id)
     if not user:
         abort(404)      #doesn't exist
+    # A non-admin level user is only permitted to retrieve their own user record
+    if g.user.role != "ADMIN" and user.email != g.user.email:
+        abort(403)  # forbidden
+
     db.session.delete(user)
     db.session.commit()
     return jsonify({}), 204
