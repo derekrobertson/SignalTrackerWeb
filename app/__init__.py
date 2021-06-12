@@ -10,7 +10,8 @@ app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # Import secrets
-secrets = yaml.load(open(f'{basedir}\secrets.yaml'), Loader=yaml.SafeLoader)
+secrets_file = os.path.join(basedir, 'secrets.yaml')
+secrets = yaml.load(open(secrets_file), Loader=yaml.SafeLoader)
 driver = secrets['database']['driver']
 username = secrets['database']['username']
 password = secrets['database']['password']
