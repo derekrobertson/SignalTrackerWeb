@@ -95,7 +95,7 @@ def new_user():
     if first_name is None or last_name is None or email is None or password is None or role is None:
         abort(400)  # missing args
     if role != 'USER' and role != 'ADMIN':
-        abort(404)  # bad role provided
+        abort(400)  # bad role provided
     if User.query.filter_by(email = email).one_or_none() is not None:
         abort(409)  # existing user
     user = User(first_name = first_name, 
@@ -127,7 +127,7 @@ def update_user(id):
 
     user = User.query.get(id)
     if not user:
-        abort(404)  # doesn't exist
+        abort(409)  # conflict
 
     # A non-admin level user is only permitted to retrieve their own user record
     if g.user.role != "ADMIN" and user.email != g.user.email:
@@ -143,7 +143,7 @@ def update_user(id):
         user.hash_password(password)
     if role is not None:
         if role != 'USER' and role != 'ADMIN':
-            abort(404)      # bad role provided
+            abort(400)      # bad role provided
         user.role = role
 
     db.session.commit()
@@ -154,8 +154,8 @@ def update_user(id):
 USERS > DELETE(ID)
 """
 @app.route('/api/v1.0/users/<int:id>', methods=['DELETE'])
-@require_api_key
 @auth.login_required
+@require_api_key
 def delete_user(id):
     user = User.query.get(id)
     if not user:
@@ -178,6 +178,9 @@ def delete_user(id):
 DEVICES > GET(ALL)
 """
 @app.route('/api/v1.0/devices', methods=['GET'])
+@auth.login_required
+@require_api_key
+@require_admin_role
 def get_devices():
     devices = Device.query.all()
     return jsonify([d.serialize() for d in devices])
@@ -188,10 +191,20 @@ def get_devices():
 DEVICES > GET(ID)
 """
 @app.route('/api/v1.0/devices/<int:id>', methods=['GET'])
+@require_api_key
+@auth.login_required
 def get_device(id):
     device = Device.query.get(id)
     if not device:
         abort(404)
+    # A non-admin level user is only permitted to retrieve devices that belong to that user
+    if g.user.role != "ADMIN":
+        user = User.query.get(device.user_id)
+        if not user:
+            abort(404)
+        if user.email != g.user.email:
+            abort(403)  # forbidden
+
     return jsonify(device.serialize())
 
 
@@ -199,6 +212,8 @@ def get_device(id):
 DEVICES > CREATE
 """
 @app.route('/api/v1.0/devices', methods = ['POST'])
+@auth.login_required
+@require_api_key
 def new_device():
     user_id = request.json.get('user_id')
     manufacturer = request.json.get('manufacturer')
@@ -213,6 +228,11 @@ def new_device():
     if not user:
         abort(404)   # specified user_id does not exist
 
+    # A non-admin level user is only permitted to retrieve devices that belong to that user
+    if g.user.role != "ADMIN" and user.email != g.user.email:
+        abort(403)  # forbidden
+
+    # Create the new device
     device = Device(user_id = user_id, 
                 manufacturer = manufacturer,
                 model = model,
@@ -229,6 +249,8 @@ def new_device():
 DEVICES > UPDATE(ID)
 """
 @app.route('/api/v1.0/devices/<int:id>', methods=['PUT'])
+@auth.login_required
+@require_api_key
 def update_device(id):
     manufacturer = request.json.get('manufacturer')
     model = request.json.get('model')
@@ -241,6 +263,14 @@ def update_device(id):
     device = Device.query.get(id)
     if not device:
         abort(404)  # device doesn't exist
+
+    # A non-admin level user is only permitted to retrieve devices that belong to that user
+    if g.user.role != "ADMIN":
+        user = User.query.get(device.user_id)
+        if not user:
+            abort(409)
+        if user.email != g.user.email:
+            abort(403)  # forbidden
 
     if manufacturer is not None:
         device.manufacturer = manufacturer
@@ -259,10 +289,21 @@ def update_device(id):
 DEVICES > DELETE(ID)
 """
 @app.route('/api/v1.0/devices/<int:id>', methods=['DELETE'])
+@auth.login_required
+@require_api_key
 def delete_device(id):
     device = Device.query.get(id)
     if not device:
         abort(404)
+
+    # A non-admin level user is only permitted to retrieve devices that belong to that user
+    if g.user.role != "ADMIN":
+        user = User.query.get(device.user_id)
+        if not user:
+            abort(409)
+        if user.email != g.user.email:
+            abort(403)  # forbidden
+
     db.session.delete(device)
     db.session.commit()
     return jsonify({}), 204
@@ -277,6 +318,9 @@ def delete_device(id):
 READINGS > GET(ALL)
 """
 @app.route('/api/v1.0/readings', methods=['GET'])
+@auth.login_required
+@require_api_key
+@require_admin_role
 def get_readings():
     readings = Reading.query.all()
     return jsonify([r.serialize() for r in readings])
@@ -287,10 +331,24 @@ def get_readings():
 READINGS > GET(ID)
 """
 @app.route('/api/v1.0/readings/<int:id>', methods=['GET'])
+@auth.login_required
+@require_api_key
 def get_reading(id):
     reading = Reading.query.get(id)
     if not reading:
         abort(404)
+
+    # A non-admin level user is only permitted to retrieve readings that belong to that user
+    if g.user.role != "ADMIN":
+        device = Device.query.get(reading.device_id)
+        if not device:
+            abort(404)
+        user = User.query.get(device.user_id)
+        if not user:
+            abort(409)
+        if user.email != g.user.email:
+            abort(403)  # forbidden
+
     return jsonify(reading.serialize())
 
 
@@ -298,6 +356,8 @@ def get_reading(id):
 READINGS > CREATE
 """
 @app.route('/api/v1.0/readings', methods = ['POST'])
+@auth.login_required
+@require_api_key
 def new_reading():
     device_id = request.json.get('device_id')
     celltower_id = request.json.get('celltower_id')
@@ -312,11 +372,20 @@ def new_reading():
 
     device = Device.query.get(device_id)
     if not device:
-        abort(404)   # specified device_id does not exist
+        abort(400)   # specified device_id does not exist
 
     celltower = CellTower.query.get(celltower_id)
     if not celltower:
-        abort(404)   # specified celltower_id does not exist
+        abort(400)   # specified celltower_id does not exist
+
+    # A non-admin level user is only permitted to create readings that belong to that user
+    if g.user.role != "ADMIN":
+        user = User.query.get(device.user_id)
+        if not user:
+            abort(409)
+        if user.email != g.user.email:
+            abort(403)  # forbidden
+
 
     reading = Reading(device_id = device_id, 
                 celltower_id = celltower_id,
@@ -335,6 +404,8 @@ def new_reading():
 READINGS > UPDATE(ID)
 """
 @app.route('/api/v1.0/readings/<int:id>', methods=['PUT'])
+@auth.login_required
+@require_api_key
 def update_reading(id):
     latitude = request.json.get('latitude')
     longitude = request.json.get('longitude')
@@ -347,6 +418,17 @@ def update_reading(id):
     reading = Reading.query.get(id)
     if not reading:
         abort(404)  # reading doesn't exist
+
+    # A non-admin level user is only permitted to retrieve readings that belong to that user
+    if g.user.role != "ADMIN":
+        device = Device.query.get(reading.device_id)
+        if not device:
+            abort(409)
+        user = User.query.get(device.user_id)
+        if not user:
+            abort(409)
+        if user.email != g.user.email:
+            abort(403)  # forbidden
 
     if latitude is not None:
         reading.latitude = latitude
@@ -365,10 +447,24 @@ def update_reading(id):
 READINGS > DELETE(ID)
 """
 @app.route('/api/v1.0/readings/<int:id>', methods=['DELETE'])
+@auth.login_required
+@require_api_key
 def delete_reading(id):
     reading = Reading.query.get(id)
     if not reading:
         abort(404)
+
+    # A non-admin level user is only permitted to retrieve readings that belong to that user
+    if g.user.role != "ADMIN":
+        device = Device.query.get(reading.device_id)
+        if not device:
+            abort(409)  # conflict
+        user = User.query.get(device.user_id)
+        if not user:
+            abort(409)  # conflict
+        if user.email != g.user.email:
+            abort(403)  # forbidden
+
     db.session.delete(reading)
     db.session.commit()
     return jsonify({}), 204
@@ -382,6 +478,8 @@ def delete_reading(id):
 CELLTOWERS > GET(ALL)
 """
 @app.route('/api/v1.0/celltowers', methods=['GET'])
+@auth.login_required
+@require_api_key
 def get_celltowers():
     celltowers = CellTower.query.all()
     return jsonify([c.serialize() for c in celltowers])
@@ -392,6 +490,8 @@ def get_celltowers():
 CELLTOWERS > GET(ID)
 """
 @app.route('/api/v1.0/celltowers/<int:id>', methods=['GET'])
+@auth.login_required
+@require_api_key
 def get_celltower(id):
     celltower = CellTower.query.get(id)
     if not celltower:
@@ -403,6 +503,8 @@ def get_celltower(id):
 CELLTOWERS > CREATE
 """
 @app.route('/api/v1.0/celltowers', methods = ['POST'])
+@auth.login_required
+@require_api_key
 def new_celltower():
     celltower_name = request.json.get('celltower_name')
     location_area_code = request.json.get('location_area_code')
@@ -435,6 +537,9 @@ def new_celltower():
 CELLTOWERS > UPDATE(ID)
 """
 @app.route('/api/v1.0/celltowers/<int:id>', methods=['PUT'])
+@auth.login_required
+@require_api_key
+@require_admin_role
 def update_celltower(id):
     celltower_name = request.json.get('celltower_name')
     location_area_code = request.json.get('location_area_code')
@@ -469,6 +574,9 @@ def update_celltower(id):
 CELLTOWERS > DELETE(ID)
 """
 @app.route('/api/v1.0/celltowers/<int:id>', methods=['DELETE'])
+@auth.login_required
+@require_api_key
+@require_admin_role
 def delete_celltower(id):
     celltower = CellTower.query.get(id)
     if not celltower:
