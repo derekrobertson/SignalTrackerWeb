@@ -79,6 +79,22 @@ def get_user(id):
 
 
 """
+USERS > GET(EMAIL)
+"""
+@app.route('/api/v1.0/users/<string:email>', methods=['GET'])
+@auth.login_required
+@require_api_key
+def get_user_by_email(email):
+    user = User.query.filter_by(email = email).one_or_none()
+    if user is None:
+        abort(404)
+    # A non-admin level user is only permitted to retrieve their own user record
+    if g.user.role != "ADMIN" and user.email != g.user.email:
+        abort(403)  # forbidden
+    return jsonify(user.serialize())
+
+
+"""
 USERS > CREATE
 As the mobile app needs the ability to register a new user, the api_key value is used to 
 validate the key provided by the caller to the api. If it matches it is allowed.
