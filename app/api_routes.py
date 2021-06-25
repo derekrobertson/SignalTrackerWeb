@@ -248,6 +248,10 @@ def new_device():
     if g.user.role != "ADMIN" and user.email != g.user.email:
         abort(403)  # forbidden
 
+    # Check if the device already exists
+    if Device.query.filter_by(serial_no = serial_no).one_or_none() is not None:
+        abort(409)  # already exists
+
     # Create the new device
     device = Device(user_id = user_id, 
                 manufacturer = manufacturer,
@@ -258,7 +262,7 @@ def new_device():
     db.session.add(device)
     db.session.commit()
 
-    return jsonify(device.serialize()), 201, {'Location': url_for('get_user', id = device.device_id, _external = True)}
+    return jsonify(device.serialize()), 201, {'Location': url_for('get_device', id = device.device_id, _external = True)}
 
 
 """
