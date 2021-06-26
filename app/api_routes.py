@@ -537,9 +537,12 @@ def new_celltower():
              or latitude is None or longitude is None:
         abort(400)  # missing args
 
-    if CellTower.query.filter_by(celltower_name = celltower_name).one_or_none() is not None:
-        abort(409)  # existing celltower
+    # If the celltower already exists, just return that instead
+    celltower = CellTower.query.filter_by(celltower_name = celltower_name).one_or_none()
+    if celltower is not None:
+        return jsonify(celltower.serialize()), 409, {'Location': url_for('new_celltower', id = celltower.celltower_id, _external = True)}
 
+    # If the celltower does not exist, then lets create it
     celltower = CellTower(celltower_name = celltower_name, 
                 location_area_code = location_area_code,
                 mobile_country_code = mobile_country_code,
@@ -550,7 +553,7 @@ def new_celltower():
     db.session.add(celltower)
     db.session.commit()
 
-    return jsonify(celltower.serialize()), 201, {'Location': url_for('get_celltower', id = celltower.celltower_id, _external = True)}
+    return jsonify(celltower.serialize()), 201, {'Location': url_for('new_celltower', id = celltower.celltower_id, _external = True)}
 
 
 """
