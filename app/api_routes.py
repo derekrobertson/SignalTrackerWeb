@@ -249,8 +249,9 @@ def new_device():
         abort(403)  # forbidden
 
     # Check if the device already exists
-    if Device.query.filter_by(serial_no = serial_no).one_or_none() is not None:
-        abort(409)  # already exists
+    device = Device.query.filter_by(serial_no = serial_no).one_or_none()
+    if device is not None:
+        return jsonify(device.serialize()), 201, {'Location': url_for('new_device', id = device.device_id, _external = True)}
 
     # Create the new device
     device = Device(user_id = user_id, 
@@ -262,7 +263,7 @@ def new_device():
     db.session.add(device)
     db.session.commit()
 
-    return jsonify(device.serialize()), 201, {'Location': url_for('get_device', id = device.device_id, _external = True)}
+    return jsonify(device.serialize()), 201, {'Location': url_for('new_device', id = device.device_id, _external = True)}
 
 
 """
@@ -540,7 +541,7 @@ def new_celltower():
     # If the celltower already exists, just return that instead
     celltower = CellTower.query.filter_by(celltower_name = celltower_name).one_or_none()
     if celltower is not None:
-        return jsonify(celltower.serialize()), 409, {'Location': url_for('new_celltower', id = celltower.celltower_id, _external = True)}
+        return jsonify(celltower.serialize()), 201, {'Location': url_for('new_celltower', id = celltower.celltower_id, _external = True)}
 
     # If the celltower does not exist, then lets create it
     celltower = CellTower(celltower_name = celltower_name, 
