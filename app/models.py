@@ -1,14 +1,20 @@
-from app import db
+from app import db, login
 from datetime import datetime
 from passlib.apps import custom_app_context as pwd_context
+from flask_login import UserMixin
+
+
+# Get the user entry used for website login
+@login.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 
 
 # SQLAlchemy models for our Postgres database
 
-
 # Model for 'User' database table
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = 'user'
     user_id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(32), nullable=False)
@@ -26,6 +32,10 @@ class User(db.Model):
         single_parent=True,
         order_by='desc(Device.timestamp)'
     )
+
+    # Override get_id for UserMixin as we are using user_id as unique indentifier rather than id
+    def get_id(self):
+        return (self.user_id)
 
     # Hash the plaintext password with SHA256 for safe storage in database
     def hash_password(self, password):

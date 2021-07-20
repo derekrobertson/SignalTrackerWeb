@@ -3,6 +3,8 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_httpauth import HTTPBasicAuth
+from flask_login import LoginManager
+from flask_bootstrap import Bootstrap
 import yaml
 
 
@@ -19,8 +21,11 @@ fqdn = secrets['database']['fqdn']
 port = secrets['database']['port']
 dbname = secrets['database']['dbname']
 
+# Get the SECRET_KEY we will use for flask-wtf to prevent CSRF attaches
+app.config['SECRET_KEY'] = secrets['secret_key']
+
 # Get the trusted api key that the REST API uses to validate calls are coming from the SignalTracker mobile app
-app.api_key = secrets['api_key']
+app.config['API_KEY'] = secrets['api_key']
 
 # Configure the SQLAlchemy part of the app instance
 app.config['SQLALCHEMY_ECHO'] = True
@@ -32,5 +37,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 auth = HTTPBasicAuth()
+login = LoginManager(app)
+login.login_view = 'login'
+bootstrap = Bootstrap(app)
 
 from app import web_routes, api_routes, models
+

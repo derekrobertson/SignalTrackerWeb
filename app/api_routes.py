@@ -21,7 +21,7 @@ def verify_password(email, password):
 def require_api_key(f):
     @functools.wraps(f)
     def wrapped(*args, **kwargs):
-        if request.headers.get('x-api-key') != app.api_key:
+        if request.headers.get('x-api-key') != app.config['API_KEY']:
             abort(403)  # forbidden
         # execute the wrapped function
         return f(*args, **kwargs)
