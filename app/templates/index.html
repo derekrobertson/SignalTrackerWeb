@@ -1,6 +1,11 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block content %}
-    <h1>Hi, {{ current_user.first_name }}!</h1>
-
+{% block app_content %}
+<div class="row">
+    <div class="col-md-6 vcenter">Hi, {{ current_user.first_name }}!</div>
+    <div class="col-md-4 vcenter">
+        <label for="datepicker">Select a date to view the data:</label>
+        <input type="date" id="datepicker" name="datepicker">
+    </div>
+</div>
 {% endblock %}
