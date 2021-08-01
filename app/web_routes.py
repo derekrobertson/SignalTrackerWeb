@@ -5,15 +5,43 @@ from app.models import User, Device, Reading, CellTower
 from app.forms import LoginForm
 from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.urls import url_parse
+from datetime import datetime, timedelta
+from time import strftime
 
 
 
 # Default route
-@app.route('/')
-@app.route('/index')
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/index',  methods=['GET', 'POST'])
 @login_required
 def index():
-    return render_template('index.html', title='SignalTracker')
+    if current_user.role == 'ADMIN':
+        users = User.query.filter(User.role != 'ADMIN').order_by(User.email).all()
+    else:
+        users = current_user
+
+    if request.method == 'GET':
+        view_date = datetime.now().strftime('%Y-%m-%d')
+        view_user = current_user
+        return render_template('index.html', title='SignalTracker', users=users, view_user=view_user, view_date=view_date)
+        
+    if request.method == 'POST':
+        view_date = request.form['datepicker']
+        view_user = User.query.get(request.form['selectUser'])
+
+        # Get the users device
+        device = Device.query.filter(Device.user_id == view_user.user_id).one_or_none()
+        
+        # Get the readings and celltowers
+        view_date_plus_one_day = datetime.strptime(view_date, "%Y-%m-%d") + timedelta(days=1)
+        readings = Reading.query.filter(Reading.device_id == device.device_id, 
+                                    Reading.timestamp >= view_date, Reading.timestamp < str(view_date_plus_one_day)).all()
+
+        # Get the celltowers for the readings
+        celltowers = CellTower.query.filter().all()
+        
+        return render_template('index.html', title='SignalTracker', users=users, view_user=view_user, view_date=view_date,
+                                    device=device, readings=readings, celltower=celltowers, maps_api_key=app.config['MAPS_API_KEY'])
 
 
 # User login route

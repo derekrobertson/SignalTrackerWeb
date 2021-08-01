@@ -1,11 +1,112 @@
 {% extends 'base.html' %}
 
 {% block app_content %}
-<div class="row">
-    <div class="col-md-6 vcenter">Hi, {{ current_user.first_name }}!</div>
-    <div class="col-md-4 vcenter">
-        <label for="datepicker">Select a date to view the data:</label>
-        <input type="date" id="datepicker" name="datepicker">
-    </div>
+<div class="container">
+    <form action="" method="post">
+        <div class="row">
+            <div class="col">
+            </div>
+            <div class="col mb-2">
+                <label class="form-label" for="selectUser">Select user:</label>
+                <select class="form-select" name="selectUser">
+                    {% if users is iterable %}
+                        {% for user in users %}
+                        {% if user.user_id == view_user.user_id %}
+                        <option selected value="{{ user.user_id }}">{{ user.email }}</option>
+                        {% else %}
+                        <option value="{{ user.user_id }}">{{ user.email }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <option selected value="{{ view_user.user_id }}">{{ view_user.email }}</option>
+                    {% endif %}
+                </select>
+            </div>
+            <div class="col mb-2">
+                {% if users is iterable %}
+                <label class="form-label" for="datepicker">Select a date to view this users data:</label>
+                {% else %}
+                <label class="form-label" for="datepicker">Select a date to view your data:</label>
+                {% endif %}
+                <input class="form-control" type="date" id="datepicker" name="datepicker" value="{{ view_date }}">
+            </div>
+            <div class="col mb-2 align-self-end">
+                <button type="submit" class="btn btn-primary">Get Data</button>
+            </div>
+        </div>
+    </form>
 </div>
+    <!-- Map is drawn on this div element -->
+    <div id="map" style="min-height:750px; height: 100%; width: 100%">
+        {% if readings is defined %}
+        {% if readings|count > 0 %}
+        <script src="https://maps.googleapis.com/maps/api/js?key={{ maps_api_key }}&libraries=visualization"></script>
+        <script>
+            var map
+
+            function getCircleColor(val) {
+                var color
+
+                // orange to red
+                // if (val >= 0 && val <= 15) { color = "#FBB539"; }
+                // if (val > 15 && val <= 20) { color = "#FAA307"; }
+                // if (val > 20 && val <= 25) { color = "#F48C06"; }
+                // if (val > 25 && val <= 30) { color = "#E85D04"; }
+                // if (val > 30 && val <= 35) { color = "#DC2F02"; }
+                // if (val > 35 && val <= 40) { color = "#D00000"; }
+                // if (val > 40 && val <= 45) { color = "#9D0208"; }
+                // if (val > 45 && val <= 50) { color = "#6A040F"; }
+                // if (val > 55 && val <= 65) { color = "#370617"; }
+                // if (val > 65 && val <= 100) { color = "#03071E"; }
+
+                // blue to orange
+                if (val >= 0 && val <= 10) { color = "#166281"; }
+                if (val > 10 && val <= 20) { color = "#1E85AE"; }
+                if (val > 20 && val <= 25) { color = "#4CB6E1"; }
+                if (val > 25 && val <= 30) { color = "#8CD0EC"; }
+                if (val > 30 && val <= 35) { color = "#BDCAA1"; }
+                if (val > 35 && val <= 40) { color = "#EDC356"; }
+                if (val > 40 && val <= 45) { color = "#F3A12F"; }
+                if (val > 45 && val <= 55) { color = "#F87F08"; }
+                if (val > 55 && val <= 65) { color = "#F04F0D"; }
+                if (val > 65 && val <= 100) { color = "#E30018"; }
+                return color;
+            }
+
+
+
+            function initMap() {
+
+                var irvine = new google.maps.LatLng(55.63429, -4.64361);
+
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: irvine,
+                    zoom: 13,
+                    mapTypeId: "satellite"
+                });
+
+
+                {% for reading in readings %}
+                var circle = new google.maps.Circle({
+                    strokeColor: getCircleColor({{ reading.signal_value }}),
+                    strokeOpacity: 0.5,
+                    strokeWeight: 2,
+                    fillColor: getCircleColor({{ reading.signal_value }}),
+                    fillOpacity: 0.5,
+                    map,
+                    center: new google.maps.LatLng({{ reading.latitude }}, {{ reading.longitude }}),
+                    radius: 5,
+                });
+                {% endfor %}
+            
+            }
+
+            google.maps.event.addDomListener(window, 'load', initMap);
+        </script>
+        {% else %}
+        <p>No readings found for that date</p>
+        {% endif %}
+        {% endif %}
+    </div>
+
 {% endblock %}

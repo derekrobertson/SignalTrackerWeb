@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 
 {% block app_content %}
-<main class="form-signin text-center">
+<main class="form-signin">
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         <img class="mb-4" src="{{ url_for('static', filename='signaltracker.png') }}" alt="" width="256" height="256">
             <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
         <div class="form-floating">
-            {{ form.email.label(class="form-label") }}
-            {{ form.email(size=32, class="form-control") }}
+            {{ form.email(class="form-control", placeholder="name@example.com") }}
+            {{ form.email.label }}
         </div>
         <div class="form-floating">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(size=32, class="form-control") }}
+            {{ form.password(class="form-control", placeholder="password") }}
+            {{ form.password.label }}
         </div>
         <div class="checkbox mb-3">
             {{ form.remember_me(class="form-check-input") }} {{ form.remember_me.label(class="form-check-label") }}

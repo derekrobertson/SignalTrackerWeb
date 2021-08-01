@@ -27,6 +27,9 @@ app.config['SECRET_KEY'] = secrets['secret_key']
 # Get the trusted api key that the REST API uses to validate calls are coming from the SignalTracker mobile app
 app.config['API_KEY'] = secrets['api_key']
 
+# Get the google maps api key
+app.config['MAPS_API_KEY'] = secrets['maps_api_key']
+
 # Configure the SQLAlchemy part of the app instance
 app.config['SQLALCHEMY_ECHO'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = f"{driver}://{username}:{password}@{fqdn}:{port}/{dbname}"
