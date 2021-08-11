@@ -28,7 +28,10 @@ app.config['SECRET_KEY'] = secrets['secret_key']
 app.config['API_KEY'] = secrets['api_key']
 
 # Get the google maps api key
-app.config['MAPS_API_KEY'] = secrets['maps_api_key']
+app.config['MAPS_API_KEY'] = secrets['maps_api_key']  
+
+# Get the opencell id api key
+app.config['OPENCELLID_API_KEY'] = secrets['opencellid_api_key']
 
 # Configure the SQLAlchemy part of the app instance
 app.config['SQLALCHEMY_ECHO'] = True

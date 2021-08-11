@@ -47,18 +47,6 @@
             function getCircleColor(val) {
                 var color
 
-                // orange to red
-                // if (val >= 0 && val <= 15) { color = "#FBB539"; }
-                // if (val > 15 && val <= 20) { color = "#FAA307"; }
-                // if (val > 20 && val <= 25) { color = "#F48C06"; }
-                // if (val > 25 && val <= 30) { color = "#E85D04"; }
-                // if (val > 30 && val <= 35) { color = "#DC2F02"; }
-                // if (val > 35 && val <= 40) { color = "#D00000"; }
-                // if (val > 40 && val <= 45) { color = "#9D0208"; }
-                // if (val > 45 && val <= 50) { color = "#6A040F"; }
-                // if (val > 55 && val <= 65) { color = "#370617"; }
-                // if (val > 65 && val <= 100) { color = "#03071E"; }
-
                 // blue to orange
                 if (val >= 0 && val <= 10) { color = "#166281"; }
                 if (val > 10 && val <= 20) { color = "#1E85AE"; }
@@ -73,6 +61,15 @@
                 return color;
             }
 
+            
+            //Get the celltowers
+            var geolocate_url = "https://www.googleapis.com/geolocation/v1/geolocate?key={{ maps_api_key }}";
+            var map_celltower_img = {
+                url: "{{ url_for('static', filename='map_celltower.png') }}",
+                size: new google.maps.Size(32, 32)
+            };
+
+
 
 
             function initMap() {
@@ -85,7 +82,7 @@
                     mapTypeId: "satellite"
                 });
 
-
+                // Add circles for the readings
                 {% for reading in readings %}
                 var circle = new google.maps.Circle({
                     strokeColor: getCircleColor({{ reading.signal_value }}),
@@ -98,7 +95,31 @@
                     radius: 5,
                 });
                 {% endfor %}
-            
+
+                // Add markers for the celltowers
+                const cellImage = {
+                    url: "{{ url_for('static', filename='map_celltower_small.png') }}",
+                    size: new google.maps.Size(32, 32)
+                };
+                
+                {% for map_marker in map_markers %}
+                var cellMarker = new google.maps.Marker({
+                    position: { 
+                        lat: {{ map_marker.lat }},
+                        lng: {{ map_marker.lng }} 
+                    },
+                    icon: cellImage,
+                    label: {
+                        text: "{{ map_marker.celltower_name }}",
+                        color: "white",
+                        fontFamily: "Arial",
+                        fontSize: "12px"
+                    },
+                    map
+                });
+                {% endfor %}
+
+
             }
 
             google.maps.event.addDomListener(window, 'load', initMap);

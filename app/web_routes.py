@@ -7,6 +7,8 @@ from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.urls import url_parse
 from datetime import datetime, timedelta
 from time import strftime
+import requests
+import json
 
 
 
@@ -38,10 +40,58 @@ def index():
                                     Reading.timestamp >= view_date, Reading.timestamp < str(view_date_plus_one_day)).all()
 
         # Get the celltowers for the readings
-        celltowers = CellTower.query.filter().all()
+        celltowers = CellTower.query.filter(CellTower.celltower_id.in_([reading.celltower_id for reading in readings])).all()
         
+        map_markers = []
+        geolocation_url = 'http://opencellid.org/cell/get'
+
+        for celltower in celltowers:
+            query = {
+                "key": app.config['OPENCELLID_API_KEY'],
+                "mcc": celltower.mobile_country_code,
+                "mnc": celltower.mobile_network_code,
+                "lac": celltower.location_area_code,
+                "cellid": celltower.celltower_name,
+                "format": "json"
+            }
+
+            response = requests.get(geolocation_url, params=query)
+            if response.status_code == 200:
+                location = json.loads(response.text)
+                map_markers.append({
+                    "celltower_name": celltower.celltower_name,
+                    "lat": location["lat"],
+                    "lng": location["lon"]
+                })
+
+        # Google geolocate as an alternative to Opencellid
+        # geolocation_url = 'https://www.googleapis.com/geolocation/v1/geolocate?key={}'.format(app.config['MAPS_API_KEY'])
+
+        # # Get the approx GPS location of each celltower 
+        # for celltower in celltowers:
+        #         query = {
+        #             "cellTowers": [
+        #                 {
+        #                     "cellId": celltower.celltower_name,
+        #                     "locationAreaCode": celltower.location_area_code,
+        #                     "mobileCountryCode": celltower.mobile_country_code,
+        #                     "mobileNetworkCode": celltower.mobile_network_code
+        #                 }
+        #             ]
+        #         }
+
+        #         response = requests.post(geolocation_url, json=query)
+        #         if response.status_code == 200:
+        #             location = json.loads(response.text)
+        #             map_markers.append({
+        #                 "celltower_name": celltower.celltower_name,
+        #                 "lat": location["location"]["lat"],
+        #                 "lng": location["location"]["lng"]
+        #             })
+        
+
         return render_template('index.html', title='SignalTracker', users=users, view_user=view_user, view_date=view_date,
-                                    device=device, readings=readings, celltower=celltowers, maps_api_key=app.config['MAPS_API_KEY'])
+                                    device=device, readings=readings, map_markers=map_markers, maps_api_key=app.config['MAPS_API_KEY'])
 
 
 # User login route
